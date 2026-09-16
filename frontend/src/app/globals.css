@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900;
+  }
+}
+
+/* Custom Orb Animation Cycles - Calm & Intelligent without rotation */
+@keyframes orb-idle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+    filter: brightness(1.15);
+  }
+}
+
+@keyframes orb-thinking {
+  0%, 100% {
+    transform: scale(1.05);
+    filter: brightness(1.25);
+  }
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.4);
+  }
+}
+
+@keyframes orb-streaming {
+  0%, 100% {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+  50% {
+    transform: scale(1.06);
+    filter: brightness(1.3);
+  }
+}
+
+.animate-orb-idle {
+  animation: orb-idle 4s ease-in-out infinite;
+}
+
+.animate-orb-thinking {
+  animation: orb-thinking 1.8s ease-in-out infinite;
+}
+
+.animate-orb-streaming {
+  animation: orb-streaming 1.2s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.8);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.5);
+}

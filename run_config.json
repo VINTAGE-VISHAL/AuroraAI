@@ -1,0 +1,41 @@
+{
+  "run_name": "Aurora_v2_DBMS_FullBook",
+  "date": "2026-08-04",
+  "base_model": "Qwen/Qwen3-8B",
+  "dataset": {
+    "name": "DBMS Textbook",
+    "chapters_count": 28,
+    "total_samples": 44186,
+    "average_tokens_per_sample": 246.56,
+    "max_sequence_length": 1024
+  },
+  "environment": {
+    "gpu": "RTX 4080",
+    "quantization": "4-bit NF4",
+    "double_quantization": true,
+    "compute_dtype": "bfloat16"
+  },
+  "lora_hyperparameters": {
+    "r": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "training_hyperparameters": {
+    "epochs": 1,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.03,
+    "batch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "save_steps": 200
+  }
+}

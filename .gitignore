@@ -1,0 +1,80 @@
+# --- Python Environment & Caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.hypothesis/
+
+# --- Virtual Environments ---
+.venv/
+venv/
+ENV/
+env/
+active_env/
+conda-env/
+
+# --- Build & Distribution ---
+build/
+dist/
+develop-eggs/
+eggs/
+.eggs/
+wheels/
+*.egg-info/
+MANIFEST
+
+# --- Secrets & Local Configurations ---
+.env
+.env.*
+*.local
+credentials.json
+secrets.json
+
+# --- OS & Editor Files ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.agents/
+.gemini/
+
+# --- Large AI/ML Model Artifacts ---
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+huggingface_cache/
+models/
+
+# --- Generated ML/RAG Indexes & Caches ---
+*.faiss
+vector_store/
+embeddings_cache/
+
+# --- Local Project Data & Outputs ---
+data/corpus/*.jsonl
+data/logs/
+data/output/
+data/raw/
+*.log
+logs/
+temp/
+tmp/
+
+
+
+
+# --- Next.js Frontend Generated & Cache Files ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/*.tsbuildinfo
+
