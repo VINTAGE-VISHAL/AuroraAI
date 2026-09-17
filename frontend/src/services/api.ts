@@ -64,18 +64,24 @@ export async function streamChatCompletion({
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = "";
     let accumulatedText = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Keep the last incomplete fragment in the buffer
+      buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const dataStr = line.replace("data: ", "").trim();
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        if (trimmedLine.startsWith("data: ")) {
+          const dataStr = trimmedLine.replace(/^data:\s*/, "").trim();
           if (dataStr === "[DONE]") continue;
 
           try {
@@ -86,9 +92,34 @@ export async function streamChatCompletion({
               onChunk(delta);
             }
           } catch {
-            // Raw text chunk stream
-            accumulatedText += dataStr;
-            onChunk(dataStr);
+            // Only forward as raw text if it does not look like an incomplete JSON object
+            if (!dataStr.startsWith("{") && !dataStr.startsWith("[")) {
+              accumulatedText += dataStr;
+              onChunk(dataStr);
+            }
+          }
+        }
+      }
+    }
+
+    // Flush any remaining buffer if it contains a completed SSE event
+    if (buffer.trim()) {
+      const trimmedLine = buffer.trim();
+      if (trimmedLine.startsWith("data: ")) {
+        const dataStr = trimmedLine.replace(/^data:\s*/, "").trim();
+        if (dataStr !== "[DONE]") {
+          try {
+            const parsed = JSON.parse(dataStr);
+            const delta = parsed.choices?.[0]?.delta?.content || "";
+            if (delta) {
+              accumulatedText += delta;
+              onChunk(delta);
+            }
+          } catch {
+            if (!dataStr.startsWith("{") && !dataStr.startsWith("[")) {
+              accumulatedText += dataStr;
+              onChunk(dataStr);
+            }
           }
         }
       }
