@@ -596,8 +596,10 @@ export default function Home() {
           onStopGeneration={handleStopGeneration}
           isGenerating={isGenerating}
           activeSubject={activeSubject}
+          conversationId={activeConversationId}
         />
       </div>
     </div>
   );
 }
+

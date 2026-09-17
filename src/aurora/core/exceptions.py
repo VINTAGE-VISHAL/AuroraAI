@@ -160,6 +160,42 @@ class InvalidGraphReferenceError(GraphConstructionError):
     pass
 
 
+class FileValidationError(AuroraError):
+    """Base exception for runtime file validation failures."""
+    pass
+
+
+class UnsupportedFileTypeError(FileValidationError):
+    """Raised when uploaded file has an unsupported extension or MIME type."""
+    pass
+
+
+class FileTooLargeError(FileValidationError):
+    """Raised when uploaded file exceeds maximum configured size limit."""
+    pass
+
+
+class InvalidFilenameError(FileValidationError):
+    """Raised when uploaded filename is empty, malformed, or attempts traversal."""
+    pass
+
+
+class InvalidConversationIdError(FileValidationError):
+    """Raised when conversation ID is empty, malformed, or attempts traversal."""
+    pass
+
+
+class RuntimeFileNotFoundError(StorageError):
+    """Raised when a runtime uploaded file is not found in storage."""
+    pass
+
+
+class StorageOperationError(StorageError):
+    """Raised when writing, reading, or deleting runtime files encounters an I/O error."""
+    pass
+
+
+
 
 
 

@@ -59,6 +59,20 @@ class CorpusConfig(BaseConfig):
             self.output_path = os.path.join(tempfile.gettempdir(), "aurora_test_training.jsonl")
 
 
+class RuntimeStorageConfig(BaseConfig):
+    """Configuration settings for runtime conversation-scoped file storage."""
+    upload_dir: str = "data/runtime_uploads"
+    max_upload_size_mb: int = 20
+    allowed_extensions: list[str] = [".pdf", ".docx", ".txt", ".md"]
+    allowed_mime_types: list[str] = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "text/markdown",
+        "application/octet-stream",  # Often sent by browsers for .md / generic text
+    ]
+
+
 class Settings(BaseConfig):
     """Unified application settings configuration."""
     project_name: str = "AuroraEngine"
@@ -72,4 +86,6 @@ class Settings(BaseConfig):
     training: TrainingConfig = TrainingConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
     deployment: DeploymentConfig = DeploymentConfig()
+    runtime_storage: RuntimeStorageConfig = RuntimeStorageConfig()
+
 

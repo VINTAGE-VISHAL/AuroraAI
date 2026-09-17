@@ -5,13 +5,29 @@ import time
 import uuid
 import asyncio
 import threading
+from pathlib import Path
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# Append project root to path
-sys.path.append("c:/AuroraEngine/src")
+# Append project root src to path
+current_file_dir = Path(__file__).resolve().parent
+project_root = current_file_dir.parent.parent.parent
+src_dir = project_root / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
+from aurora.config.loader import load_settings
+from aurora.core.exceptions import (
+    FileTooLargeError,
+    FileValidationError,
+    RuntimeFileNotFoundError,
+    StorageOperationError,
+)
+from aurora.ingestion.runtime.file_validator import RuntimeFileValidator
+from aurora.ingestion.runtime.file_storage import RuntimeFileStorage
+from aurora.services.file_service import FileService
 from aurora.inference.loader import ModelLoader
 from aurora.inference.adapter_manager import AdapterManager
 from aurora.inference.generator import Generator
@@ -19,6 +35,7 @@ from aurora.inference.inference_engine import InferenceEngine
 from aurora.inference.stt_service import FasterWhisperSTTService
 
 app = FastAPI(title="Aurora Engine API Server", version="1.0.0")
+
 
 # Enable CORS for frontend flexibility
 app.add_middleware(
@@ -108,8 +125,78 @@ async def transcribe_speech(file: UploadFile = File(...)):
         # Clean user-facing error message without exposing Python stack traces
         raise HTTPException(status_code=500, detail="Speech transcription processing failed.")
 
+# File subsystem initialization
+
+settings = load_settings()
+file_validator = RuntimeFileValidator(settings.runtime_storage)
+file_storage = RuntimeFileStorage(settings.runtime_storage)
+file_service = FileService(file_validator, file_storage)
+
+@app.post("/v1/files/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    conversation_id: str = Form(...),
+):
+    """Uploads and validates a runtime conversation-scoped document (.pdf, .docx, .txt, .md)."""
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided.")
+    if not conversation_id or not conversation_id.strip():
+        raise HTTPException(status_code=400, detail="Missing or invalid conversation_id.")
+
+    try:
+        content_bytes = await file.read()
+        response_dto = file_service.upload_file(
+            conversation_id=conversation_id,
+            filename=file.filename or "",
+            content_type=file.content_type,
+            content=content_bytes,
+        )
+        return response_dto.model_dump()
+    except FileTooLargeError as e:
+        raise HTTPException(status_code=413, detail=str(e))
+    except FileValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except StorageOperationError as e:
+        raise HTTPException(status_code=500, detail="Storage processing failure.")
+    except Exception as e:
+        print(f"File upload unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Internal file processing error.")
+
+@app.get("/v1/files/{file_id}")
+def get_file_metadata(
+    file_id: str,
+    conversation_id: Optional[str] = Query(None),
+):
+    """Retrieves metadata for a runtime uploaded file."""
+    try:
+        response_dto = file_service.get_file(file_id, conversation_id=conversation_id)
+        return response_dto.model_dump()
+    except RuntimeFileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"File get metadata error: {e}")
+        raise HTTPException(status_code=500, detail="Error retrieving file metadata.")
+
+@app.delete("/v1/files/{file_id}")
+def delete_file(
+    file_id: str,
+    conversation_id: Optional[str] = Query(None),
+):
+    """Deletes a runtime uploaded file and its metadata."""
+    try:
+        deleted = file_service.delete_file(file_id, conversation_id=conversation_id)
+        if deleted:
+            return {"deleted": True, "file_id": file_id}
+        raise HTTPException(status_code=404, detail=f"File '{file_id}' was not found.")
+    except RuntimeFileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"File delete error: {e}")
+        raise HTTPException(status_code=500, detail="Error deleting file.")
+
 @app.get("/v1/models")
 def get_models():
+
     """Returns OpenAI-compatible model listing for all trained Aurora domain adapters."""
     models_list = []
     for m_id in ADAPTER_MAP.keys():

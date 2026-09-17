@@ -1,5 +1,6 @@
 import { AURORA_API_BASE_URL } from "@/config/api";
-import { Message, SubjectContext } from "@/types";
+import { Message, RuntimeFile, SubjectContext } from "@/types";
+
 
 export interface StreamChatParams {
   messages: Message[];
@@ -302,4 +303,68 @@ export async function transcribeAudioBlob(audioBlob: Blob): Promise<{ text: stri
     throw error;
   }
 }
+
+export async function uploadFile(
+  file: File,
+  conversationId: string
+): Promise<RuntimeFile> {
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("conversation_id", conversationId);
+
+  // Note: Do NOT set Content-Type header; browser must set multipart boundary automatically.
+  const response = await fetch(`${AURORA_API_BASE_URL}/files/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorDetail = `Upload failed with status ${response.status}`;
+    try {
+      const errJson = await response.json();
+      if (errJson.detail) {
+        errorDetail = errJson.detail;
+      }
+    } catch {
+      // Use fallback errorDetail
+    }
+    throw new Error(errorDetail);
+  }
+
+  return (await response.json()) as RuntimeFile;
+}
+
+export async function getFileMetadata(
+  fileId: string,
+  conversationId?: string
+): Promise<RuntimeFile> {
+  const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : "";
+  const response = await fetch(`${AURORA_API_BASE_URL}/files/${encodeURIComponent(fileId)}${query}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to retrieve file metadata (${response.status})`);
+  }
+
+  return (await response.json()) as RuntimeFile;
+}
+
+export async function deleteFile(
+  fileId: string,
+  conversationId?: string
+): Promise<boolean> {
+  const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : "";
+  const response = await fetch(`${AURORA_API_BASE_URL}/files/${encodeURIComponent(fileId)}${query}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete file (${response.status})`);
+  }
+
+  const result = await response.json();
+  return !!result.deleted;
+}
+
 

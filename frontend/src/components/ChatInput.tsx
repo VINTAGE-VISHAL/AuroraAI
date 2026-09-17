@@ -1,16 +1,18 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Square, Sparkles, Mic, MicOff, Loader2 } from "lucide-react";
-import { SubjectContext } from "@/types";
-import { transcribeAudioBlob } from "@/services/api";
+import { Send, Square, Sparkles, Mic, MicOff, Loader2, Paperclip, FileText, Check, X, AlertCircle } from "lucide-react";
+import { RuntimeFile, SubjectContext } from "@/types";
+import { transcribeAudioBlob, uploadFile } from "@/services/api";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   onStopGeneration: () => void;
   isGenerating: boolean;
   activeSubject: SubjectContext;
+  conversationId?: string | null;
 }
+
 
 const DOMAIN_PROMPT_SUGGESTIONS: Record<SubjectContext, string[]> = {
   AUTO: [
@@ -55,12 +57,85 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onStopGeneration,
   isGenerating,
   activeSubject,
+  conversationId,
 }) => {
   const [input, setInput] = useState("");
   const [sttState, setSttState] = useState<"idle" | "recording" | "transcribing">("idle");
+  const [attachedFile, setAttachedFile] = useState<{
+    file_id?: string;
+    filename: string;
+    size_bytes: number;
+    status: "uploading" | "stored" | "failed";
+    error?: string;
+  } | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input element so selecting the same file again triggers change
+    e.target.value = "";
+
+    // Client-side quick extension check (.pdf, .docx, .txt, .md)
+    const allowedExtensions = [".pdf", ".docx", ".txt", ".md"];
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      setAttachedFile({
+        filename: file.name,
+        size_bytes: file.size,
+        status: "failed",
+        error: `Unsupported file type (${ext}). Please attach PDF, DOCX, TXT, or MD.`,
+      });
+      return;
+    }
+
+    // Client-side quick size check (20 MB default)
+    const maxBytes = 20 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setAttachedFile({
+        filename: file.name,
+        size_bytes: file.size,
+        status: "failed",
+        error: "File size exceeds 20 MB limit.",
+      });
+      return;
+    }
+
+    const effectiveConvId = conversationId || "default_session";
+    setAttachedFile({
+      filename: file.name,
+      size_bytes: file.size,
+      status: "uploading",
+    });
+
+    try {
+      const response = await uploadFile(file, effectiveConvId);
+      setAttachedFile({
+        file_id: response.file_id,
+        filename: response.filename,
+        size_bytes: response.size_bytes,
+        status: "stored",
+      });
+    } catch (err: any) {
+      console.warn("File upload failed:", err);
+      setAttachedFile({
+        filename: file.name,
+        size_bytes: file.size,
+        status: "failed",
+        error: err.message || "Upload failed. Please check backend status.",
+      });
+    }
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null);
+  };
+
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -209,11 +284,72 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
+      {/* Attachment Preview Badge */}
+      {attachedFile && (
+        <div className="mb-2 flex items-center gap-2 p-2 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {attachedFile.status === "uploading" ? (
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+            ) : attachedFile.status === "stored" ? (
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+            <span className="font-medium text-slate-800 truncate">
+              {attachedFile.filename}
+            </span>
+            <span className="text-[11px] text-slate-400 shrink-0">
+              ({(attachedFile.size_bytes / 1024).toFixed(1)} KB)
+            </span>
+            {attachedFile.status === "uploading" && (
+              <span className="text-[11px] text-blue-600 font-medium">Uploading...</span>
+            )}
+            {attachedFile.status === "stored" && (
+              <span className="text-[11px] text-emerald-600 font-medium">Stored</span>
+            )}
+            {attachedFile.status === "failed" && (
+              <span className="text-[11px] text-rose-600 font-medium">
+                {attachedFile.error || "Upload failed"}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleRemoveAttachment}
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+            title="Remove attachment"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Hidden Native File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.txt,.md"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       {/* Input Box Container */}
       <form
         onSubmit={handleSubmit}
         className="relative rounded-2xl bg-white border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-lg transition-all p-1.5 sm:p-2 flex items-end gap-1.5 sm:gap-2"
       >
+        {/* Attachment Paperclip Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isGenerating || attachedFile?.status === "uploading"}
+          className="p-2.5 rounded-xl transition-all cursor-pointer shrink-0 bg-slate-100 text-slate-500 border border-slate-200 hover:text-slate-800 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Attach document (.pdf, .docx, .txt, .md)"
+        >
+          <Paperclip className="w-4 h-4" />
+        </button>
+
         <textarea
           ref={textareaRef}
           value={input}
@@ -232,6 +368,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
 
         {/* Speech Dictation Button */}
+
         <button
           type="button"
           onClick={toggleRecording}

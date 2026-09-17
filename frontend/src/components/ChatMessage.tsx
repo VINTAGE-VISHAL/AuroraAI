@@ -96,50 +96,53 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   return (
     <div
-      className={`py-3.5 px-3 sm:px-6 transition-colors ${
+
+      className={`py-3 sm:py-4 px-2.5 sm:px-6 transition-colors w-full overflow-hidden ${
         isUser
           ? "bg-blue-50/60 border-y border-blue-100/80"
           : "bg-white border-y border-slate-100"
       }`}
     >
-      <div className="max-w-4xl mx-auto flex gap-2.5 sm:gap-4">
+      <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4 w-full min-w-0">
         {/* Avatar */}
         <div className="shrink-0 mt-0.5">
           {isUser ? (
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-xs">
-              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-xs">
+              <User className="w-3 h-3 sm:w-4 sm:h-4" />
             </div>
           ) : (
-            <AuroraOrb state={isStreaming ? "streaming" : "idle"} size="sm" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
+              <AuroraOrb state={isStreaming ? "streaming" : "idle"} size="sm" className="!w-6 !h-6 sm:!w-8 sm:!h-8" />
+            </div>
           )}
         </div>
 
         {/* Content Container */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-1.5 sm:space-y-2 overflow-hidden">
           {/* Header Metadata */}
-          <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-500">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span className="font-bold text-slate-900">
+          <div className="flex items-center justify-between gap-1 text-[11px] sm:text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
+              <span className="font-bold text-slate-900 shrink-0">
                 {isUser ? "You" : "Samarthan AI"}
               </span>
 
               {subjectBadge && !isUser && (
                 <span
-                  className="text-[10px] px-2 py-0.5 rounded-full border font-mono bg-blue-50 text-blue-700 border-blue-200"
+                  className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full border font-mono bg-blue-50 text-blue-700 border-blue-200 truncate max-w-[120px] sm:max-w-none"
                 >
                   {subjectBadge.name}
                 </span>
               )}
 
               {message.model && !isUser && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono hidden xs:inline-block">
+                <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono hidden md:inline-block">
                   {message.model}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <span className="text-[10px] sm:text-[11px] text-slate-400 mr-0.5">{formattedTime}</span>
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <span className="text-[9px] sm:text-[11px] text-slate-400">{formattedTime}</span>
 
               {/* Text to Speech Button */}
               {!isUser && parsedContent.content && !isStreaming && (
@@ -169,7 +172,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           </div>
 
           {/* Body Content */}
-          <div className="relative space-y-2">
+          <div className="relative space-y-2 w-full overflow-hidden">
             {parsedContent.thinking && (
               <ThinkingAccordion
                 thinking={parsedContent.thinking}
@@ -198,3 +201,5 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     </div>
   );
 };
+
+

@@ -60,3 +60,16 @@ export interface StorageAdapter {
   saveProject(project: Project): void;
   deleteProject(id: string): void;
 }
+
+export interface RuntimeFile {
+  file_id: string;
+  conversation_id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  extension: string;
+  status: "uploading" | "stored" | "processing" | "ready" | "failed" | "deleted";
+  created_at: number;
+}
+
+
