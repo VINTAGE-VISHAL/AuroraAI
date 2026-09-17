@@ -44,7 +44,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-72 rounded-xl bg-white border border-slate-200 shadow-xl z-50 py-1.5 divide-y divide-slate-100">
+        <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-[calc(100vw-2rem)] max-w-72 rounded-xl bg-white border border-slate-200 shadow-xl z-50 py-1.5 divide-y divide-slate-100">
           <div className="px-3 py-1.5 flex items-center justify-between">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
               Samarthan Intelligence Core

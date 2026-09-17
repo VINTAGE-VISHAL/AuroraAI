@@ -77,47 +77,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const pinnedChats = filteredConversations.filter((c) => c.pinned);
   const recentChats = filteredConversations.filter((c) => !c.pinned && !c.projectId);
 
-  if (!isOpen) {
-    return (
-      <button
-        type="button"
-        onClick={onToggleOpen}
-        className="fixed top-3 left-3 z-40 p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 shadow-md backdrop-blur-md transition-all cursor-pointer"
-        title="Open Workspace Sidebar"
-      >
-        <PanelLeft className="w-5 h-5" />
-      </button>
-    );
-  }
-
   return (
-    <aside className="w-72 h-full bg-slate-50/95 border-r border-slate-200 flex flex-col z-30 shadow-sm shrink-0 transition-all font-sans text-slate-800">
-      {/* 1. TOP BRANDING AREA */}
-      <div className="p-4 border-b border-slate-200/80 flex flex-col gap-3 bg-white/60">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/mcet_logo.png"
-              alt="Dr. Mahalingam College of Engineering and Technology Logo"
-              className="h-16 w-auto object-contain shrink-0 max-w-[140px]"
-            />
+    <>
+      {/* Mobile / Tablet Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+          onClick={onToggleOpen}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 h-full w-72 sm:w-80 bg-slate-50 border-r border-slate-200 flex flex-col shadow-xl lg:shadow-none shrink-0 transition-transform duration-300 ease-in-out font-sans text-slate-800 ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:hidden"
+        }`}
+      >
+        {/* 1. TOP BRANDING AREA */}
+        <div className="p-4 border-b border-slate-200/80 flex flex-col gap-3 bg-white/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img
+                src="/mcet_logo.png"
+                alt="Dr. Mahalingam College of Engineering and Technology Logo"
+                className="h-14 sm:h-16 w-auto object-contain shrink-0 max-w-[130px] sm:max-w-[140px]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onToggleOpen}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              title="Close Sidebar"
+            >
+              <PanelLeftClose className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onToggleOpen}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
-            title="Collapse Sidebar"
-          >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
+          <div>
+            <h1 className="text-base font-extrabold text-slate-900 tracking-wide">
+              SAMARTHAN
+            </h1>
+            <p className="text-xs text-blue-600 font-semibold">AI Educational Assistant</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-base font-extrabold text-slate-900 tracking-wide">
-            SAMARTHAN
-          </h1>
-          <p className="text-xs text-blue-600 font-semibold">AI Educational Assistant</p>
-        </div>
-      </div>
 
       {/* 2. PRIMARY ACTIONS (+ New Chat & Search) */}
       <div className="p-3 border-b border-slate-200/60 space-y-2 bg-white/40">
@@ -374,6 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
     </aside>
+    </>
   );
 };
 

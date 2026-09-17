@@ -19,10 +19,17 @@ export default function Home() {
   const [activeSubject, setActiveSubject] = useState<SubjectContext>("AUTO");
   const [activeModel, setActiveModel] = useState<string>("aurora-unified");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const activeAbortController = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Responsive sidebar default: open on desktop (>=1024px), closed on mobile/tablet
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarOpen(true);
+    }
+  }, []);
 
   // Hydrate conversations and projects from localStorage on initial mount
   useEffect(() => {
@@ -73,6 +80,10 @@ export default function Home() {
     setConversations((prev) => [newConv, ...prev]);
     setActiveConversationId(newConv.id);
     storageAdapter.saveConversation(newConv);
+
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   }, [activeSubject, activeModel, activeProjectId]);
 
   // Handle Projects
@@ -88,6 +99,10 @@ export default function Home() {
     setProjects((prev) => [newProj, ...prev]);
     storageAdapter.saveProject(newProj);
     setActiveProjectId(newProj.id);
+
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   }, []);
 
   const handleDeleteProject = useCallback((id: string) => {
@@ -114,6 +129,9 @@ export default function Home() {
 
   const handleSelectProject = useCallback((id: string | null) => {
     setActiveProjectId(id);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   }, []);
 
   // Conversation Management
@@ -212,6 +230,10 @@ export default function Home() {
     if (conv) {
       if (conv.activeSubject) setActiveSubject(conv.activeSubject);
       if (conv.activeModel) setActiveModel(conv.activeModel);
+    }
+    // Auto-dismiss sidebar on mobile/tablet screens
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
     }
   }, [conversations]);
 
@@ -425,6 +447,8 @@ export default function Home() {
           onSelectModel={handleSelectModel}
           onNewConversation={() => handleNewConversation()}
           isGenerating={isGenerating}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          sidebarOpen={sidebarOpen}
         />
 
         {/* Message Container / Project View / Welcome State */}
@@ -434,17 +458,17 @@ export default function Home() {
         >
           {activeProjectId && activeProject ? (
             /* PROJECT WORKSPACE VIEW */
-            <div className="p-8 max-w-4xl mx-auto space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+            <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs uppercase tracking-wider">
                     <Folder className="w-4 h-4" />
                     <span>Project Workspace</span>
                   </div>
-                  <h2 className="text-2xl font-extrabold text-slate-900 mt-1">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">
                     {activeProject.name}
                   </h2>
-                  <p className="text-sm text-slate-500 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                     {activeProject.description || "Organized learning workspace"}
                   </p>
                 </div>
@@ -452,7 +476,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => handleNewConversation(activeProject.id)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                   <span>New Chat in Project</span>
@@ -465,12 +489,12 @@ export default function Home() {
                 </h3>
 
                 {projectConversations.length === 0 ? (
-                  <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 space-y-3">
-                    <p className="text-sm text-slate-500">No chats added to this project yet.</p>
+                  <div className="p-6 sm:p-8 text-center rounded-2xl bg-white border border-slate-200 space-y-3">
+                    <p className="text-xs sm:text-sm text-slate-500">No chats added to this project yet.</p>
                     <button
                       type="button"
                       onClick={() => handleNewConversation(activeProject.id)}
-                      className="inline-flex items-center gap-2 text-xs text-blue-600 font-semibold hover:underline"
+                      className="inline-flex items-center gap-2 text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                       Create first chat in {activeProject.name}
@@ -482,14 +506,14 @@ export default function Home() {
                       <div
                         key={conv.id}
                         onClick={() => handleSelectConversation(conv.id)}
-                        className="p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer space-y-2"
+                        className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm truncate">
                             <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
                             <span className="truncate">{conv.title || "Untitled Session"}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
                             {new Date(conv.updatedAt).toLocaleDateString()}
                           </span>
                         </div>
@@ -506,42 +530,42 @@ export default function Home() {
             </div>
           ) : messages.length === 0 ? (
             /* FRESH WELCOME SCREEN IN LIGHT THEME */
-            <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto space-y-6">
+            <div className="min-h-full flex flex-col items-center justify-center p-4 sm:p-6 text-center max-w-2xl mx-auto space-y-5 sm:space-y-6">
               <AuroraOrb state="idle" size="xl" />
 
-              <div className="space-y-3">
-                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center justify-center gap-2">
+              <div className="space-y-2 sm:space-y-3">
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center justify-center gap-2">
                   Welcome to Samarthan
-                  <Sparkles className="w-5 h-5 text-blue-600" />
+                  <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
                 </h2>
-                <p className="text-sm font-semibold text-blue-600">
+                <p className="text-xs sm:text-sm font-semibold text-blue-600">
                   Your AI-powered educational assistant
                 </p>
                 <div className="pt-2 border-t border-slate-200 space-y-1">
-                  <p className="text-xs text-slate-700 font-medium">
-                    Developed by the Department of Computer Science and Engineering
+                  <p className="text-[11px] sm:text-xs text-slate-700 font-medium">
+                    Department of Computer Science and Engineering
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-[10px] sm:text-xs text-slate-500">
                     Dr. Mahalingam College of Engineering and Technology
                   </p>
                 </div>
               </div>
 
               {/* Feature Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left">
-                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full text-left">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <div className="flex items-center gap-1.5 text-blue-700 text-xs font-bold">
-                    <GraduationCap className="w-4 h-4" />
+                    <GraduationCap className="w-4 h-4 shrink-0" />
                     <span>Curriculum Informed</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Fine-tuned on trusted syllabus resources & textbook corpora.
+                    Fine-tuned on syllabus resources & textbook corpora.
                   </p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <div className="flex items-center gap-1.5 text-indigo-700 text-xs font-bold">
-                    <Cpu className="w-4 h-4" />
+                    <Cpu className="w-4 h-4 shrink-0" />
                     <span>LoRA Specialization</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
@@ -551,7 +575,7 @@ export default function Home() {
 
                 <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-bold">
-                    <ShieldCheck className="w-4 h-4" />
+                    <ShieldCheck className="w-4 h-4 shrink-0" />
                     <span>Clean Architecture</span>
                   </div>
                   <p className="text-[11px] text-slate-500">

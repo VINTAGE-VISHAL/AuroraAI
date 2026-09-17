@@ -137,22 +137,22 @@ async function simulateEducationalResponse({
 
 function autoDetectSubject(prompt: string): SubjectContext | "OUT_OF_DOMAIN" {
   const lower = prompt.toLowerCase();
-  if (lower.includes("sql") || lower.includes("table") || lower.includes("join") || lower.includes("index") || lower.includes("db") || lower.includes("database") || lower.includes("acid") || lower.includes("relational") || lower.includes("schema")) {
+  if (lower.includes("sql") || lower.includes("table") || lower.includes("join") || lower.includes("index") || lower.includes("db") || lower.includes("database") || lower.includes("acid") || lower.includes("relational") || lower.includes("schema") || lower.includes("normalization")) {
     return "DBMS";
   }
-  if (lower.includes("tree") || lower.includes("graph") || lower.includes("array") || lower.includes("sort") || lower.includes("complexity") || lower.includes("linked list") || lower.includes("heap") || lower.includes("stack") || lower.includes("algo") || lower.includes("search")) {
+  if (lower.includes("data structure") || lower.includes("datastructure") || lower.includes("data") || lower.includes("tree") || lower.includes("graph") || lower.includes("array") || lower.includes("sort") || lower.includes("complexity") || lower.includes("linked list") || lower.includes("heap") || lower.includes("stack") || lower.includes("queue") || lower.includes("recursion") || lower.includes("algo") || lower.includes("search") || lower.includes("hash") || lower.includes("binary")) {
     return "DSA";
   }
   if (lower.includes("class") || lower.includes("object") || lower.includes("polymorphism") || lower.includes("inheritance") || lower.includes("encapsulation") || lower.includes("solid") || lower.includes("oop") || lower.includes("method")) {
     return "OOPS";
   }
-  if (lower.includes("process") || lower.includes("thread") || lower.includes("deadlock") || lower.includes("memory") || lower.includes("semaphore") || lower.includes("page fault") || lower.includes("kernel") || lower.includes("cpu") || lower.includes("scheduling")) {
+  if (lower.includes("process") || lower.includes("thread") || lower.includes("deadlock") || lower.includes("memory") || lower.includes("semaphore") || lower.includes("page fault") || lower.includes("kernel") || lower.includes("cpu") || lower.includes("scheduling") || lower.includes("operating system") || lower.includes("mutex")) {
     return "OS";
   }
-  if (lower.includes("tcp") || lower.includes("ip") || lower.includes("osi") || lower.includes("packet") || lower.includes("socket") || lower.includes("router") || lower.includes("http") || lower.includes("dns") || lower.includes("protocol") || lower.includes("network")) {
+  if (lower.includes("tcp") || lower.includes("ip") || lower.includes("osi") || lower.includes("packet") || lower.includes("socket") || lower.includes("router") || lower.includes("http") || lower.includes("dns") || lower.includes("protocol") || lower.includes("network") || lower.includes("bandwidth") || lower.includes("lan") || lower.includes("wan")) {
     return "CNT";
   }
-  if (lower.includes("uml") || lower.includes("agile") || lower.includes("waterfall") || lower.includes("requirements") || lower.includes("design pattern") || lower.includes("testing") || lower.includes("software engineering")) {
+  if (lower.includes("uml") || lower.includes("agile") || lower.includes("waterfall") || lower.includes("requirements") || lower.includes("design pattern") || lower.includes("testing") || lower.includes("software engineering") || lower.includes("sdlc") || lower.includes("scrum")) {
     return "OOSE";
   }
 

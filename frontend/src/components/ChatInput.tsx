@@ -188,10 +188,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const suggestions = DOMAIN_PROMPT_SUGGESTIONS[activeSubject] || DOMAIN_PROMPT_SUGGESTIONS.AUTO;
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 pb-4 font-sans">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 pb-3 sm:pb-4 font-sans">
       {/* Quick Prompt Suggestions */}
       {!isGenerating && input.length === 0 && sttState === "idle" && (
-        <div className="flex items-center gap-2 overflow-x-auto py-2 mb-2 scrollbar-none">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1.5 sm:py-2 mb-1.5 sm:mb-2 scrollbar-none no-scrollbar">
           <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />
           {suggestions.map((promptText, idx) => (
             <button
@@ -201,7 +201,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 setInput(promptText);
                 if (textareaRef.current) textareaRef.current.focus();
               }}
-              className="px-3 py-1 rounded-full bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-xs text-slate-700 hover:text-blue-700 whitespace-nowrap transition-colors cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 rounded-full bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-[11px] sm:text-xs text-slate-700 hover:text-blue-700 whitespace-nowrap transition-colors cursor-pointer shadow-2xs shrink-0"
             >
               {promptText}
             </button>
@@ -212,7 +212,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {/* Input Box Container */}
       <form
         onSubmit={handleSubmit}
-        className="relative rounded-2xl bg-white border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-lg transition-all p-2 flex items-end gap-2"
+        className="relative rounded-2xl bg-white border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-lg transition-all p-1.5 sm:p-2 flex items-end gap-1.5 sm:gap-2"
       >
         <textarea
           ref={textareaRef}
@@ -222,13 +222,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           disabled={sttState === "transcribing"}
           placeholder={
             sttState === "recording"
-              ? "Recording voice... Click red mic button when finished speaking."
+              ? "Recording voice... Click mic when finished."
               : sttState === "transcribing"
-              ? "Transcribing speech using Faster-Whisper..."
-              : `Ask Samarthan (${activeSubject === "AUTO" ? "Auto Detect" : activeSubject} Domain)...`
+              ? "Transcribing speech..."
+              : `Ask Samarthan (${activeSubject === "AUTO" ? "Auto Detect" : activeSubject})...`
           }
           rows={1}
-          className="flex-1 bg-transparent border-0 resize-none px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none max-h-44 min-h-[42px] leading-relaxed disabled:opacity-50"
+          className="flex-1 bg-transparent border-0 resize-none px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none max-h-40 min-h-[38px] sm:min-h-[42px] leading-relaxed disabled:opacity-50"
         />
 
         {/* Speech Dictation Button */}

@@ -96,18 +96,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   return (
     <div
-      className={`py-4 px-4 sm:px-6 transition-colors ${
+      className={`py-3.5 px-3 sm:px-6 transition-colors ${
         isUser
           ? "bg-blue-50/60 border-y border-blue-100/80"
           : "bg-white border-y border-slate-100"
       }`}
     >
-      <div className="max-w-4xl mx-auto flex gap-4">
+      <div className="max-w-4xl mx-auto flex gap-2.5 sm:gap-4">
         {/* Avatar */}
         <div className="shrink-0 mt-0.5">
           {isUser ? (
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-xs">
-              <User className="w-4 h-4" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-xs">
+              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           ) : (
             <AuroraOrb state={isStreaming ? "streaming" : "idle"} size="sm" />
@@ -117,8 +117,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         {/* Content Container */}
         <div className="flex-1 min-w-0 space-y-2">
           {/* Header Metadata */}
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span className="font-bold text-slate-900">
                 {isUser ? "You" : "Samarthan AI"}
               </span>
@@ -132,14 +132,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               )}
 
               {message.model && !isUser && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono hidden xs:inline-block">
                   {message.model}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400 mr-1">{formattedTime}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <span className="text-[10px] sm:text-[11px] text-slate-400 mr-0.5">{formattedTime}</span>
 
               {/* Text to Speech Button */}
               {!isUser && parsedContent.content && !isStreaming && (
