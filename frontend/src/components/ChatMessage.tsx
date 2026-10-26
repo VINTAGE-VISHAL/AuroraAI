@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Message } from "@/types";
 import { AuroraOrb } from "./AuroraOrb";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { User, Copy, Check, Volume2, VolumeX, Ban } from "lucide-react";
+import { User, Copy, Check, Volume2, VolumeX, Ban, FileText, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { SUBJECT_OPTIONS } from "@/config/api";
 
 import { parseThinkingContent } from "@/utils/thinkParser";
@@ -18,6 +18,7 @@ interface ChatMessageProps {
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const [copied, setCopied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isCitationsOpen, setIsCitationsOpen] = useState(false);
 
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
@@ -171,6 +172,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </div>
           </div>
 
+          {/* Attached Document Metadata Chip (if present on user message) */}
+          {isUser && message.attachment && (
+            <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-blue-100/70 border border-blue-200/80 text-blue-900 text-xs shadow-2xs max-w-full">
+              <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="font-medium truncate max-w-[200px] sm:max-w-md" title={message.attachment.filename}>
+                {message.attachment.filename}
+              </span>
+              {message.attachment.fileType && (
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-200/60 text-blue-800 shrink-0 font-semibold">
+                  {message.attachment.fileType}
+                </span>
+              )}
+              {message.attachment.sizeBytes !== undefined && (
+                <span className="text-[10px] text-blue-600/80 shrink-0 hidden sm:inline">
+                  ({(message.attachment.sizeBytes / 1024).toFixed(1)} KB)
+                </span>
+              )}
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0 flex items-center gap-1 border border-emerald-200/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Indexed
+              </span>
+            </div>
+          )}
+
           {/* Body Content */}
           <div className="relative space-y-2 w-full overflow-hidden">
             {parsedContent.thinking && (
@@ -193,6 +218,61 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700 text-xs">
                 <Ban className="w-3.5 h-3.5" />
                 <span>Generation stopped by user</span>
+              </div>
+            )}
+
+            {/* Source Citations Accordion (Assistant RAG responses) */}
+            {!isUser && message.citations && message.citations.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCitationsOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 cursor-pointer transition-colors group"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-blue-600 group-hover:scale-105 transition-transform" />
+                  <span>
+                    Sources ({message.citations.length})
+                  </span>
+                  {isCitationsOpen ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
+                  )}
+                </button>
+
+                {isCitationsOpen && (
+                  <div className="mt-2 space-y-1.5">
+                    {message.citations.map((cit, idx) => (
+                      <div
+                        key={cit.chunk_id || idx}
+                        className="p-2 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-[10px] font-semibold text-blue-700 px-1.5 py-0.5 rounded bg-blue-100/70 border border-blue-200 shrink-0">
+                            {cit.label || `[Source ${idx + 1}]`}
+                          </span>
+                          <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span className="font-medium text-slate-800 truncate max-w-[200px] sm:max-w-xs" title={cit.filename}>
+                            {cit.filename}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 shrink-0 ml-6 sm:ml-0">
+                          {cit.source_page !== null && cit.source_page !== undefined && (
+                            <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px]">
+                              Page {cit.source_page}
+                            </span>
+                          )}
+                          {cit.relevance_score !== undefined && (
+                            <span className="text-[10px] text-emerald-700 font-mono bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.2 rounded">
+                              {Math.round(cit.relevance_score * 100)}% match
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

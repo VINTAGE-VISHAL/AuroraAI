@@ -195,6 +195,65 @@ class StorageOperationError(StorageError):
     pass
 
 
+class ChunkingError(AuroraError):
+    """Base exception for runtime chunking and preprocessing failures."""
+    pass
+
+
+class InvalidChunkingConfigError(ChunkingError):
+    """Raised when chunking configuration parameters are invalid (e.g. overlap >= chunk_size)."""
+    pass
+
+
+class EmbeddingError(AuroraError):
+    """Base exception for runtime vector embedding failures."""
+    pass
+
+
+class ModelLoadError(EmbeddingError):
+    """Raised when local embedding model fails to initialize or load."""
+    pass
+
+
+class EmbeddingInferenceError(EmbeddingError):
+    """Raised when generating embeddings for text chunks fails."""
+class VectorStoreError(StorageError):
+    """Base exception for runtime vector database storage operations."""
+    pass
+
+
+class VectorDimensionMismatchError(VectorStoreError):
+    """Raised when vector embedding dimensions do not match store configuration."""
+    pass
+
+
+class MalformedVectorError(VectorStoreError):
+    """Raised when vector embeddings contain NaN, infinite, or non-float values."""
+    pass
+
+
+class RetrievalError(AuroraError):
+    """Base exception for semantic search and retrieval failures."""
+    pass
+
+
+class InvalidTopKError(RetrievalError):
+    """Raised when top_k parameter is not a positive integer."""
+    pass
+
+
+class ContextFusionError(AuroraError):
+    """Base exception for RAG context fusion and prompt assembly failures."""
+    pass
+
+
+class InvalidContextBudgetError(ContextFusionError):
+    """Raised when maximum context token budget is not a positive integer."""
+    pass
+
+
+
+
 
 
 

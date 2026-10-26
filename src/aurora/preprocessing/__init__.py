@@ -31,3 +31,14 @@ class DefaultPreprocessor(IPreprocessor):
                 )
             )
         return processed_docs
+
+
+
+from aurora.preprocessing.runtime_chunker import RuntimeChunker
+
+__all__ = [
+    "DefaultPreprocessor",
+    "RuntimeChunker",
+]
+
+

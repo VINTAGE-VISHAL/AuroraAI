@@ -15,6 +15,25 @@ export interface ModelOption {
   isDefault?: boolean;
 }
 
+export interface MessageAttachment {
+  fileId: string;
+  filename: string;
+  sizeBytes?: number;
+  fileType?: string;
+  status: "indexing" | "ready" | "failed";
+  usedDocumentContext?: boolean;
+}
+
+export interface Citation {
+  chunk_id: string;
+  file_id: string;
+  filename: string;
+  source_page?: number | null;
+  chunk_index: number;
+  relevance_score?: number;
+  label: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
@@ -23,6 +42,8 @@ export interface Message {
   model?: string;
   timestamp: number;
   status?: "streaming" | "complete" | "cancelled" | "error";
+  attachment?: MessageAttachment;
+  citations?: Citation[];
   metadata?: {
     confidenceScore?: number;
     sourcesCount?: number;
@@ -70,6 +91,22 @@ export interface RuntimeFile {
   extension: string;
   status: "uploading" | "stored" | "processing" | "ready" | "failed" | "deleted";
   created_at: number;
+}
+
+export interface IndexingResponse {
+  file_id: string;
+  conversation_id: string;
+  indexed_count: number;
+  dimension: number;
+  chunks: Array<{
+    chunk_id: string;
+    file_id: string;
+    filename: string;
+    chunk_index: number;
+    source_page?: number | null;
+    char_count: number;
+  }>;
+  success: boolean;
 }
 
 

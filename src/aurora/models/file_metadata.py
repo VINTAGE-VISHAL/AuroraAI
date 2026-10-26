@@ -50,3 +50,29 @@ class RuntimeFileResponse(BaseModel):
             status=meta.status.value if isinstance(meta.status, FileStatus) else str(meta.status),
             created_at=meta.created_at,
         )
+
+
+class ExtractedFileResponse(BaseModel):
+    """Structured response detailing runtime extraction results for downstream modules."""
+    file_id: str
+    conversation_id: str
+    filename: str
+    extension: str
+    status: str
+    text: str
+    char_count: int
+    page_count: int = 0
+    pages: list[str] = Field(default_factory=list)
+    has_content: bool = True
+
+
+class CleanupResult(BaseModel):
+    """Summary of automatic file and vector cleanup operations."""
+    cleaned_files_count: int = 0
+    cleaned_vectors_count: int = 0
+    scanned_conversations_count: int = 0
+    stale_files: list[str] = Field(default_factory=list)
+    skipped_in_use_count: int = 0
+    errors: list[str] = Field(default_factory=list)
+
+

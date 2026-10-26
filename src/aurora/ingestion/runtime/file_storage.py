@@ -134,6 +134,36 @@ class RuntimeFileStorage(IFileStorage):
 
         return None
 
+    def read_file(
+        self,
+        file_id: str,
+        conversation_id: Optional[str] = None,
+    ) -> bytes:
+        """Reads file bytes from isolated conversation storage.
+        
+        Raises:
+            RuntimeFileNotFoundError if the file or metadata does not exist.
+            StorageOperationError if reading fails.
+        """
+        meta = self.get_metadata(file_id, conversation_id)
+        if not meta:
+            raise RuntimeFileNotFoundError(f"File '{file_id}' was not found in storage.")
+
+        target_file = (self.base_dir / meta.storage_path).resolve()
+        try:
+            target_file.relative_to(self.base_dir)
+        except ValueError:
+            raise StorageOperationError("Path traversal attempt detected in storage path.")
+
+        if not target_file.is_file():
+            raise RuntimeFileNotFoundError(f"File '{file_id}' data file missing at '{target_file}'.")
+
+        try:
+            with open(target_file, "rb") as f:
+                return f.read()
+        except Exception as e:
+            raise StorageOperationError(f"Failed to read file from storage: {e}") from e
+
     def delete_file(
         self,
         file_id: str,
@@ -157,3 +187,44 @@ class RuntimeFileStorage(IFileStorage):
                 raise StorageOperationError(f"Failed to delete runtime file directory: {e}") from e
 
         return False
+
+    def list_all_metadata(self) -> list[RuntimeFileMetadata]:
+        """Lists all persisted file metadata across all conversations."""
+        records: list[RuntimeFileMetadata] = []
+        if not self.base_dir.exists():
+            return records
+
+        for conv_dir in self.base_dir.iterdir():
+            if conv_dir.is_dir():
+                for file_dir in conv_dir.iterdir():
+                    if file_dir.is_dir():
+                        meta_file = file_dir / "metadata.json"
+                        if meta_file.is_file():
+                            try:
+                                with open(meta_file, "r", encoding="utf-8") as f:
+                                    data = json.load(f)
+                                    records.append(RuntimeFileMetadata.model_validate(data))
+                            except Exception:
+                                continue
+        return records
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Removes the entire conversation upload directory and all contained files."""
+        if not conversation_id or ".." in conversation_id or "/" in conversation_id or "\\" in conversation_id:
+            raise InvalidConversationIdError("Invalid conversation identifier")
+
+        conv_dir = (self.base_dir / conversation_id).resolve()
+        try:
+            conv_dir.relative_to(self.base_dir)
+        except ValueError:
+            raise StorageOperationError("Path traversal attempt detected in conversation deletion.")
+
+        if conv_dir.exists():
+            try:
+                shutil.rmtree(conv_dir)
+                return True
+            except Exception as e:
+                raise StorageOperationError(f"Failed to delete conversation storage: {e}") from e
+        return False
+
+

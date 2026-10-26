@@ -64,6 +64,8 @@ data/corpus/*.jsonl
 data/logs/
 data/output/
 data/raw/
+data/runtime_uploads/
+data/vector_store/
 *.log
 logs/
 temp/

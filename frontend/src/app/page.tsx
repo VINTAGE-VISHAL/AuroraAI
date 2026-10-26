@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Conversation, Message, Project, SubjectContext } from "@/types";
+import { Conversation, Message, MessageAttachment, Project, SubjectContext } from "@/types";
 import { storageAdapter } from "@/services/storage";
 import { streamChatCompletion } from "@/services/api";
 import { Sidebar } from "@/components/Sidebar";
@@ -238,13 +238,19 @@ export default function Home() {
   }, [conversations]);
 
   // Handle message send & live streaming
-  const handleSendMessage = async (promptText: string) => {
+  const handleSendMessage = async (
+    promptText: string,
+    attachedFileId?: string,
+    attachmentMeta?: MessageAttachment,
+    attachedConvId?: string
+  ) => {
     let currentConvId = activeConversationId;
     let currentConv = activeConversation;
 
     if (!currentConvId || !currentConv) {
+      const generatedConvId = attachedConvId || `conv_${Date.now()}`;
       const newConv: Conversation = {
-        id: `conv_${Date.now()}`,
+        id: generatedConvId,
         title: promptText.slice(0, 30) + (promptText.length > 30 ? "..." : ""),
         messages: [],
         activeSubject: activeSubject,
@@ -266,6 +272,7 @@ export default function Home() {
       timestamp: Date.now(),
       subject: activeSubject,
       model: activeModel,
+      attachment: attachmentMeta,
     };
 
     const assistantMessageId = `msg_ast_${Date.now()}`;
@@ -311,6 +318,8 @@ export default function Home() {
       messages: [...recentHistory, userMessage],
       subject: activeSubject,
       model: activeModel,
+      conversationId: currentConvId,
+      fileId: attachedFileId,
       signal: controller.signal,
       onChunk: (chunkText) => {
         setConversations((prev) =>
@@ -331,7 +340,7 @@ export default function Home() {
           })
         );
       },
-      onComplete: (fullText) => {
+      onComplete: (fullText, citations) => {
         setIsGenerating(false);
         activeAbortController.current = null;
         setConversations((prev) =>
@@ -343,6 +352,7 @@ export default function Home() {
                     ...m,
                     content: fullText || m.content,
                     status: "complete" as const,
+                    citations: citations && citations.length > 0 ? citations : undefined,
                   };
                 }
                 return m;

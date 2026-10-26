@@ -1,5 +1,5 @@
 import { AURORA_API_BASE_URL } from "@/config/api";
-import { Message, RuntimeFile, SubjectContext } from "@/types";
+import { Citation, IndexingResponse, Message, RuntimeFile, SubjectContext } from "@/types";
 
 
 export interface StreamChatParams {
@@ -7,8 +7,11 @@ export interface StreamChatParams {
   subject: SubjectContext;
   model: string;
   signal: AbortSignal;
+  conversationId?: string | null;
+  fileId?: string | null;
+  fileIds?: string[] | null;
   onChunk: (chunk: string) => void;
-  onComplete: (fullText: string) => void;
+  onComplete: (fullText: string, citations?: Citation[]) => void;
   onError: (error: Error) => void;
 }
 
@@ -17,6 +20,9 @@ export async function streamChatCompletion({
   subject,
   model,
   signal,
+  conversationId,
+  fileId,
+  fileIds,
   onChunk,
   onComplete,
   onError,
@@ -27,19 +33,31 @@ export async function streamChatCompletion({
       content: m.content,
     }));
 
+    const requestBody: Record<string, unknown> = {
+      model,
+      messages: formattedMessages,
+      stream: true,
+      extra_body: {
+        subject_context: subject,
+      },
+    };
+
+    if (conversationId) {
+      requestBody.conversation_id = conversationId;
+    }
+    if (fileId) {
+      requestBody.file_id = fileId;
+    }
+    if (fileIds && fileIds.length > 0) {
+      requestBody.file_ids = fileIds;
+    }
+
     const response = await fetch(`${AURORA_API_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: formattedMessages,
-        stream: true,
-        extra_body: {
-          subject_context: subject,
-        },
-      }),
+      body: JSON.stringify(requestBody),
       signal,
     }).catch((err) => {
       // Catch connection errors (e.g. backend server offline)
@@ -66,6 +84,7 @@ export async function streamChatCompletion({
     const decoder = new TextDecoder();
     let buffer = "";
     let accumulatedText = "";
+    let receivedCitations: Citation[] | undefined = undefined;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -86,6 +105,12 @@ export async function streamChatCompletion({
 
           try {
             const parsed = JSON.parse(dataStr);
+            // Check for citations on choice or root
+            const chunkCitations = parsed.citations || parsed.choices?.[0]?.citations;
+            if (Array.isArray(chunkCitations) && chunkCitations.length > 0) {
+              receivedCitations = chunkCitations;
+            }
+
             const delta = parsed.choices?.[0]?.delta?.content || "";
             if (delta) {
               accumulatedText += delta;
@@ -110,6 +135,11 @@ export async function streamChatCompletion({
         if (dataStr !== "[DONE]") {
           try {
             const parsed = JSON.parse(dataStr);
+            const chunkCitations = parsed.citations || parsed.choices?.[0]?.citations;
+            if (Array.isArray(chunkCitations) && chunkCitations.length > 0) {
+              receivedCitations = chunkCitations;
+            }
+
             const delta = parsed.choices?.[0]?.delta?.content || "";
             if (delta) {
               accumulatedText += delta;
@@ -125,7 +155,7 @@ export async function streamChatCompletion({
       }
     }
 
-    onComplete(accumulatedText);
+    onComplete(accumulatedText, receivedCitations);
   } catch (error: any) {
     if (error.name === "AbortError") {
       // Clean handle for user requested abort
@@ -379,6 +409,31 @@ export async function getFileMetadata(
   }
 
   return (await response.json()) as RuntimeFile;
+}
+
+export async function indexFile(
+  fileId: string,
+  conversationId: string
+): Promise<IndexingResponse> {
+  const query = `?conversation_id=${encodeURIComponent(conversationId)}`;
+  const response = await fetch(`${AURORA_API_BASE_URL}/files/${encodeURIComponent(fileId)}/index${query}`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    let errorDetail = `Indexing failed with status ${response.status}`;
+    try {
+      const errJson = await response.json();
+      if (errJson.detail) {
+        errorDetail = errJson.detail;
+      }
+    } catch {
+      // Use fallback
+    }
+    throw new Error(errorDetail);
+  }
+
+  return (await response.json()) as IndexingResponse;
 }
 
 export async function deleteFile(

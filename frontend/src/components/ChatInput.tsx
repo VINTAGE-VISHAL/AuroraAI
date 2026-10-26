@@ -1,12 +1,17 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Square, Sparkles, Mic, MicOff, Loader2, Paperclip, FileText, Check, X, AlertCircle } from "lucide-react";
-import { RuntimeFile, SubjectContext } from "@/types";
-import { transcribeAudioBlob, uploadFile } from "@/services/api";
+import { Send, Square, Sparkles, Mic, MicOff, Loader2, Paperclip, FileText, Check, X, AlertCircle, RefreshCw } from "lucide-react";
+import { MessageAttachment, SubjectContext } from "@/types";
+import { indexFile, transcribeAudioBlob, uploadFile } from "@/services/api";
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (
+    message: string,
+    attachedFileId?: string,
+    attachmentMeta?: MessageAttachment,
+    attachedConvId?: string
+  ) => void;
   onStopGeneration: () => void;
   isGenerating: boolean;
   activeSubject: SubjectContext;
@@ -63,16 +68,86 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [sttState, setSttState] = useState<"idle" | "recording" | "transcribing">("idle");
   const [attachedFile, setAttachedFile] = useState<{
     file_id?: string;
+    conversation_id?: string;
     filename: string;
     size_bytes: number;
-    status: "uploading" | "stored" | "failed";
+    status: "uploading" | "indexing" | "ready" | "failed";
     error?: string;
+    rawFile?: File;
   } | null>(null);
+
+  // Guard against duplicate indexing requests
+  const isIndexingRef = useRef(false);
+
+  // Clear or re-isolate attachment when conversationId changes
+  const prevConvIdRef = useRef<string | null | undefined>(conversationId);
+  useEffect(() => {
+    if (prevConvIdRef.current !== conversationId) {
+      prevConvIdRef.current = conversationId;
+      setAttachedFile(null);
+    }
+  }, [conversationId]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  const processUploadAndIndex = async (file: File) => {
+    if (isIndexingRef.current) return;
+    isIndexingRef.current = true;
+
+    const effectiveConvId = conversationId || `conv_${Date.now()}`;
+    setAttachedFile({
+      conversation_id: effectiveConvId,
+      filename: file.name,
+      size_bytes: file.size,
+      status: "uploading",
+      rawFile: file,
+    });
+
+    try {
+      // Step 1: Upload file
+      const uploadResponse = await uploadFile(file, effectiveConvId);
+      const fileId = uploadResponse.file_id;
+
+      // Step 2: Index file for RAG
+      setAttachedFile({
+        file_id: fileId,
+        conversation_id: effectiveConvId,
+        filename: file.name,
+        size_bytes: file.size,
+        status: "indexing",
+        rawFile: file,
+      });
+
+      await indexFile(fileId, effectiveConvId);
+
+      // Step 3: Mark Ready
+      setAttachedFile({
+        file_id: fileId,
+        conversation_id: effectiveConvId,
+        filename: file.name,
+        size_bytes: file.size,
+        status: "ready",
+        rawFile: file,
+      });
+    } catch (err: unknown) {
+      console.warn("File upload/indexing failed:", err);
+      const errorMessage = err instanceof Error ? err.message : "Upload or indexing failed. Please retry.";
+      setAttachedFile((prev) => ({
+        filename: file.name,
+        size_bytes: file.size,
+        file_id: prev?.file_id,
+        conversation_id: effectiveConvId,
+        status: "failed",
+        error: errorMessage,
+        rawFile: file,
+      }));
+    } finally {
+      isIndexingRef.current = false;
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,29 +181,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       return;
     }
 
-    const effectiveConvId = conversationId || "default_session";
-    setAttachedFile({
-      filename: file.name,
-      size_bytes: file.size,
-      status: "uploading",
-    });
+    await processUploadAndIndex(file);
+  };
 
-    try {
-      const response = await uploadFile(file, effectiveConvId);
-      setAttachedFile({
-        file_id: response.file_id,
-        filename: response.filename,
-        size_bytes: response.size_bytes,
-        status: "stored",
-      });
-    } catch (err: any) {
-      console.warn("File upload failed:", err);
-      setAttachedFile({
-        filename: file.name,
-        size_bytes: file.size,
-        status: "failed",
-        error: err.message || "Upload failed. Please check backend status.",
-      });
+  const handleRetryAttachment = async () => {
+    if (attachedFile?.rawFile) {
+      await processUploadAndIndex(attachedFile.rawFile);
     }
   };
 
@@ -243,11 +301,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() || isGenerating) return;
+
+    // Disallow submission if attachment is currently uploading or indexing
+    if (attachedFile?.status === "uploading" || attachedFile?.status === "indexing") {
+      return;
+    }
+
     if (sttState === "recording") {
       stopRecording();
     }
-    onSendMessage(input.trim());
+
+    const isReady = attachedFile?.status === "ready" && Boolean(attachedFile.file_id);
+    const readyFileId = isReady ? attachedFile.file_id : undefined;
+
+    let attachmentMeta: MessageAttachment | undefined = undefined;
+    if (isReady && attachedFile && attachedFile.file_id) {
+      const ext = attachedFile.filename.split(".").pop()?.toLowerCase();
+      attachmentMeta = {
+        fileId: attachedFile.file_id,
+        filename: attachedFile.filename,
+        sizeBytes: attachedFile.size_bytes,
+        fileType: ext,
+        status: "ready",
+        usedDocumentContext: true,
+      };
+    }
+
+    onSendMessage(input.trim(), readyFileId, attachmentMeta, attachedFile?.conversation_id);
+
+    // Clear message and attachment after successfully sending
     setInput("");
+    setAttachedFile(null);
+
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -286,11 +371,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Attachment Preview Badge */}
       {attachedFile && (
-        <div className="mb-2 flex items-center gap-2 p-2 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs">
+        <div className={`mb-2 flex items-center justify-between gap-2 p-2 rounded-xl bg-white border shadow-2xs text-xs transition-colors ${
+          attachedFile.status === "failed" ? "border-rose-200 bg-rose-50/30" : "border-slate-200"
+        }`}>
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {attachedFile.status === "uploading" ? (
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-            ) : attachedFile.status === "stored" ? (
+            ) : attachedFile.status === "indexing" ? (
+              <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+            ) : attachedFile.status === "ready" ? (
               <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -305,23 +394,41 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             {attachedFile.status === "uploading" && (
               <span className="text-[11px] text-blue-600 font-medium">Uploading...</span>
             )}
-            {attachedFile.status === "stored" && (
-              <span className="text-[11px] text-emerald-600 font-medium">Stored</span>
+            {attachedFile.status === "indexing" && (
+              <span className="text-[11px] text-indigo-600 font-medium">Indexing context...</span>
+            )}
+            {attachedFile.status === "ready" && (
+              <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                Ready for RAG
+              </span>
             )}
             {attachedFile.status === "failed" && (
-              <span className="text-[11px] text-rose-600 font-medium">
-                {attachedFile.error || "Upload failed"}
+              <span className="text-[11px] text-rose-600 font-medium truncate">
+                {attachedFile.error || "Failed"}
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleRemoveAttachment}
-            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
-            title="Remove attachment"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {attachedFile.status === "failed" && (
+              <button
+                type="button"
+                onClick={handleRetryAttachment}
+                className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 hover:text-rose-700 cursor-pointer transition-colors flex items-center gap-1 text-[11px] font-medium px-2 py-0.5"
+                title="Retry upload and indexing"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Retry</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleRemoveAttachment}
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              title="Remove attachment"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -343,7 +450,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isGenerating || attachedFile?.status === "uploading"}
+          disabled={isGenerating || attachedFile?.status === "uploading" || attachedFile?.status === "indexing"}
           className="p-2.5 rounded-xl transition-all cursor-pointer shrink-0 bg-slate-100 text-slate-500 border border-slate-200 hover:text-slate-800 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Attach document (.pdf, .docx, .txt, .md)"
         >
@@ -368,7 +475,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
 
         {/* Speech Dictation Button */}
-
         <button
           type="button"
           onClick={toggleRecording}
@@ -411,9 +517,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         ) : (
           <button
             type="submit"
-            disabled={!input.trim() || sttState === "transcribing"}
+            disabled={
+              !input.trim() ||
+              sttState === "transcribing" ||
+              attachedFile?.status === "uploading" ||
+              attachedFile?.status === "indexing" ||
+              attachedFile?.status === "failed"
+            }
             className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white transition-all cursor-pointer shrink-0 shadow-sm disabled:cursor-not-allowed"
-            title="Send Prompt"
+            title={
+              attachedFile?.status === "uploading"
+                ? "Please wait for upload to complete"
+                : attachedFile?.status === "indexing"
+                ? "Please wait for document indexing to complete"
+                : attachedFile?.status === "failed"
+                ? "Resolve or remove attachment before sending"
+                : "Send Prompt"
+            }
           >
             <Send className="w-4 h-4" />
           </button>

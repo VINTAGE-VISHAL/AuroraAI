@@ -71,6 +71,40 @@ class RuntimeStorageConfig(BaseConfig):
         "text/markdown",
         "application/octet-stream",  # Often sent by browsers for .md / generic text
     ]
+    cleanup_enabled: bool = True
+    retention_hours: float = 24.0  # Conservative 24h default before considering an unreferenced file stale
+
+
+class EmbeddingConfig(BaseConfig):
+    """Configuration settings for runtime Sentence Transformers embedding service."""
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    device: str = "auto"  # "auto", "cuda", "cpu"
+    batch_size: int = 32
+    normalize_embeddings: bool = True
+    embedding_dimension: int = 384
+
+
+class VectorStoreConfig(BaseConfig):
+    """Configuration settings for runtime persistent vector database."""
+    persist_dir: str = "data/vector_store"
+    distance_metric: str = "cosine"  # "cosine", "l2", "ip"
+    embedding_dimension: int = 384
+
+
+class RetrieverConfig(BaseConfig):
+    """Configuration settings for runtime semantic search and top-k retrieval."""
+    default_top_k: int = 5
+    max_top_k: int = 50
+    min_score_threshold: float = 0.0
+
+
+class ContextFusionConfig(BaseConfig):
+    """Configuration settings for RAG context fusion and prompt assembly."""
+    max_context_tokens: int = 2000
+    max_chunk_tokens: int = 600
+    dedup_similarity_threshold: float = 0.95
+    include_scores: bool = True
+    include_citations: bool = True
 
 
 class Settings(BaseConfig):
@@ -87,5 +121,10 @@ class Settings(BaseConfig):
     evaluation: EvaluationConfig = EvaluationConfig()
     deployment: DeploymentConfig = DeploymentConfig()
     runtime_storage: RuntimeStorageConfig = RuntimeStorageConfig()
+    embedding: EmbeddingConfig = EmbeddingConfig()
+    vector_store: VectorStoreConfig = VectorStoreConfig()
+    retriever: RetrieverConfig = RetrieverConfig()
+    context_fusion: ContextFusionConfig = ContextFusionConfig()
+
 
 
